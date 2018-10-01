@@ -9,6 +9,7 @@ import six
 from itertools import chain
 from codecs import iterencode
 from ..parser import Parser
+from .. import exceptions
 from .. import helpers
 from .. import config
 
@@ -112,16 +113,21 @@ class CSVParser(Parser):
                 break
 
         # Get dialect
+        separator = b'' if six.PY2 else ''
+        delimiter = self.__options.get('delimiter')
+        tested_delimiters = self.__options.get('tested_delimiters', ',\t;|')
+        delimiters = tested_delimiters if delimiter is None else delimiter
         try:
-            separator = b'' if six.PY2 else ''
-            delimiter = self.__options.get('delimiter', ',\t;|')
-            dialect = csv.Sniffer().sniff(separator.join(sample), delimiter)
-            if not dialect.escapechar:
-                dialect.doublequote = True
-        except csv.Error:
-            class dialect(csv.excel):
-                pass
-        for key, value in self.__options.items():
-            setattr(dialect, key, value)
+            dialect = csv.Sniffer().sniff(separator.join(sample), delimiters=delimiters)
+        except csv.Error as exc:
+            detected_delimiter = csv.Sniffer().sniff(separator.join(sample)).delimiter
+            raise exceptions.SourceError("{}: expected {} but detected {!r}".format(
+                str(exc),
+                "one of {!r}".format(list(delimiters)) if len(delimiters) > 1 else delimiters,
+                detected_delimiter,
+            ))
+
+        if not dialect.escapechar:
+            dialect.doublequote = True
 
         return sample, dialect
