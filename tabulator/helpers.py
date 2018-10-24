@@ -65,7 +65,7 @@ def detect_scheme_and_format(source, use_http_content_type=False):
             import requests
             try:
                 req = requests.head(source, allow_redirects=True)
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.RequestException:
                 message = 'Can\'t retrieve source http headers'
                 raise exceptions.TabulatorException(message)
 
