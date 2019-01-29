@@ -91,6 +91,13 @@ def detect_scheme_and_format(source, use_http_content_type=False):
 def detect_encoding(sample, encoding=None):
     """Detect encoding of a byte string sample.
     """
+    if encoding is None:
+        # try with default encoding first
+        try:
+            sample.decode(config.DEFAULT_ENCODING)
+            return config.DEFAULT_ENCODING
+        except UnicodeDecodeError:
+            pass
     # To reduce tabulator import time
     from cchardet import detect
     if encoding is not None:
@@ -166,7 +173,8 @@ def requote_uri(uri):
     if six.PY2:
         def url_encode_non_ascii(bytes):
             pattern = '[\x80-\xFF]'
-            replace = lambda c: ('%%%02x' % ord(c.group(0))).upper()
+
+            def replace(c): return ('%%%02x' % ord(c.group(0))).upper()
             return re.sub(pattern, replace, bytes)
         parts = urlparse(uri)
         uri = urlunparse(
